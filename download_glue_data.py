@@ -12,6 +12,8 @@ cat MRPC/_2DEC3DBE877E4DB192D17C0256E90F1D | tr -d $'\r' > MRPC/msr_paraphrase_t
 cat MRPC/_D7B391F9EAFF4B1B8BCE8F21B20B1B61 | tr -d $'\r' > MRPC/msr_paraphrase_test.txt
 rm MRPC/_*
 rm MSRParaphraseCorpus.msi
+
+1/30/19: It looks like SentEval is no longer hosting their extracted and tokenized MRPC data, so you'll need to download the data from the original source for now.
 '''
 
 import os
@@ -30,7 +32,7 @@ TASK2PATH = {"CoLA":'https://firebasestorage.googleapis.com/v0/b/mtl-sentence-re
              "STS":'https://firebasestorage.googleapis.com/v0/b/mtl-sentence-representations.appspot.com/o/data%2FSTS-B.zip?alt=media&token=bddb94a7-8706-4e0d-a694-1109e12273b5',
              "MNLI":'https://firebasestorage.googleapis.com/v0/b/mtl-sentence-representations.appspot.com/o/data%2FMNLI.zip?alt=media&token=50329ea1-e339-40e2-809c-10c40afff3ce',
              "SNLI":'https://firebasestorage.googleapis.com/v0/b/mtl-sentence-representations.appspot.com/o/data%2FSNLI.zip?alt=media&token=4afcfbb2-ff0c-4b2d-a09a-dbf07926f4df',
-             "QNLI":'https://firebasestorage.googleapis.com/v0/b/mtl-sentence-representations.appspot.com/o/data%2FQNLI.zip?alt=media&token=c24cad61-f2df-4f04-9ab6-aa576fa829d0',
+             "QNLI": 'https://firebasestorage.googleapis.com/v0/b/mtl-sentence-representations.appspot.com/o/data%2FQNLIv2.zip?alt=media&token=810a42a7-e9e5-4028-ad7f-8f20ed693a80',
              "RTE":'https://firebasestorage.googleapis.com/v0/b/mtl-sentence-representations.appspot.com/o/data%2FRTE.zip?alt=media&token=5efa7e85-a0bb-4f19-8ea2-9e1840f077fb',
              "WNLI":'https://firebasestorage.googleapis.com/v0/b/mtl-sentence-representations.appspot.com/o/data%2FWNLI.zip?alt=media&token=068ad0a0-ded7-4bd7-99a5-5e00222e0faf',
              "diagnostic":'https://storage.googleapis.com/mtl-sentence-representations.appspot.com/tsvsWithoutLabels%2FAX.tsv?GoogleAccessId=firebase-adminsdk-0khhl@mtl-sentence-representations.iam.gserviceaccount.com&Expires=2498860800&Signature=DuQ2CSPt2Yfre0C%2BiISrVYrIFaZH1Lc7hBVZDD4ZyR7fZYOMNOUGpi8QxBmTNOrNPjR3z1cggo7WXFfrgECP6FBJSsURv8Ybrue8Ypt%2FTPxbuJ0Xc2FhDi%2BarnecCBFO77RSbfuz%2Bs95hRrYhTnByqu3U%2FYZPaj3tZt5QdfpH2IUROY8LiBXoXS46LE%2FgOQc%2FKN%2BA9SoscRDYsnxHfG0IjXGwHN%2Bf88q6hOmAxeNPx6moDulUF6XMUAaXCSFU%2BnRO2RDL9CapWxj%2BDl7syNyHhB7987hZ80B%2FwFkQ3MEs8auvt5XW1%2Bd4aCU7ytgM69r8JDCwibfhZxpaa4gd50QXQ%3D%3D'}
@@ -52,26 +54,21 @@ def format_mrpc(data_dir, path_to_data):
     mrpc_dir = os.path.join(data_dir, "MRPC")
     if not os.path.isdir(mrpc_dir):
         os.mkdir(mrpc_dir)
-    if path_to_data:
-        mrpc_train_file = os.path.join(path_to_data, "msr_paraphrase_train.txt")
-        mrpc_test_file = os.path.join(path_to_data, "msr_paraphrase_test.txt")
-    else:
-        mrpc_train_file = os.path.join(mrpc_dir, "msr_paraphrase_train.txt")
-        mrpc_test_file = os.path.join(mrpc_dir, "msr_paraphrase_test.txt")
-        urllib.request.urlretrieve(MRPC_TRAIN, mrpc_train_file)
-        urllib.request.urlretrieve(MRPC_TEST, mrpc_test_file)
+    assert path_to_data, "You need to download and extract MRPC from the original source first!"
+    mrpc_train_file = os.path.join(path_to_data, "msr_paraphrase_train.txt")
+    mrpc_test_file = os.path.join(path_to_data, "msr_paraphrase_test.txt")
     assert os.path.isfile(mrpc_train_file), "Train data not found at %s" % mrpc_train_file
     assert os.path.isfile(mrpc_test_file), "Test data not found at %s" % mrpc_test_file
     urllib.request.urlretrieve(TASK2PATH["MRPC"], os.path.join(mrpc_dir, "dev_ids.tsv"))
 
     dev_ids = []
-    with open(os.path.join(mrpc_dir, "dev_ids.tsv")) as ids_fh:
+    with open(os.path.join(mrpc_dir, "dev_ids.tsv"), encoding="utf8") as ids_fh:
         for row in ids_fh:
             dev_ids.append(row.strip().split('\t'))
 
-    with open(mrpc_train_file) as data_fh, \
-         open(os.path.join(mrpc_dir, "train.tsv"), 'w') as train_fh, \
-         open(os.path.join(mrpc_dir, "dev.tsv"), 'w') as dev_fh:
+    with open(mrpc_train_file, encoding="utf8") as data_fh, \
+         open(os.path.join(mrpc_dir, "train.tsv"), 'w', encoding="utf8") as train_fh, \
+         open(os.path.join(mrpc_dir, "dev.tsv"), 'w', encoding="utf8") as dev_fh:
         header = data_fh.readline()
         train_fh.write(header)
         dev_fh.write(header)
@@ -82,8 +79,8 @@ def format_mrpc(data_dir, path_to_data):
             else:
                 train_fh.write("%s\t%s\t%s\t%s\t%s\n" % (label, id1, id2, s1, s2))
 
-    with open(mrpc_test_file) as data_fh, \
-            open(os.path.join(mrpc_dir, "test.tsv"), 'w') as test_fh:
+    with open(mrpc_test_file, encoding="utf8") as data_fh, \
+            open(os.path.join(mrpc_dir, "test.tsv"), 'w', encoding="utf8") as test_fh:
         header = data_fh.readline()
         test_fh.write("index\t#1 ID\t#2 ID\t#1 String\t#2 String\n")
         for idx, row in enumerate(data_fh):
